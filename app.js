@@ -2,16 +2,26 @@ const { json } = require('express');
 let express = require('express');
 let app = express();
 app.use(express.static('public'));
+require('dotenv').config();
+const HOST = process.env.HOST;
+const DATABASE = process.env.DATABASE;
+const PASSWORD = process.env.PASSWORD;
+const PORT = process.env.PORT || 25555;
+const USER_NAME = process.env.USER_NAME;
+
 
 app.set('view engine', 'pug');
 
 let mysql = require('mysql2');
 
+app.use(express.json());
+
 let connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '25111984',
-    database: 'market'
+    host: HOST,
+    user: USER_NAME,
+    password: PASSWORD,
+    database: DATABASE,
+    port: PORT
 })
 
 app.listen(5555, function () {
@@ -40,7 +50,6 @@ app.get('/', function (req, res) {
 });
 
 app.get('/category', function (req, res) {
-    console.log(req.query.id);
     let categoryId = req.query.id;
 
     let category = new Promise(function (resolve, reject) {
@@ -74,7 +83,7 @@ app.get('/category', function (req, res) {
 });
 
 app.get('/goods', function (req, res) {
-    console.log(req.query.id);
+    // console.log(req.query.id);
     connection.query('SELECT * FROM goods WHERE id=' + req.query.id, function (error, result, fields) {
         if (error) throw error;
         res.render('goods', { goods: JSON.parse(JSON.stringify(result)) });
@@ -87,4 +96,12 @@ app.post('/get-category-list', function (req, res) {
         if (error) throw error;
         res.json(result)
     });
-})
+});
+
+app.post('/get-goods-info', function (req, res) {
+    console.log(req.body);
+    // connection.query('SELECT id, category FROM category', function (error, result, fields) {
+    //     if (error) throw error;
+    //     res.json(result)
+    // });
+});
