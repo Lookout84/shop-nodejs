@@ -29,24 +29,15 @@ app.listen(5555, function () {
 });
 
 app.get('/', function (req, res) {
-    connection.query(
-        'SELECT * FROM goods',
-        function (error, result) {
-            if (error) throw error;
-            // console.log(result);
-            let goods = {};
-            for (let i = 0; i < result.length; i++) {
-                goods[result[i]['id']] = result[i];
+    let category = new Promise(function (resolve, reject) {
+        connection.query(
+            "select id, name, cost, image, category from (select id,name,cost,image,category, if(if(@curr_category != category, @curr_category := category, '') != '', @k := 0, @k := @k + 1) as ind   from goods, ( select @curr_category := '' ) v ) goods where ind < 3",
+            function (error, result, field) {
+                if (error) return reject(error);
+                resolve(result);
             }
-            // console.log(goods);
-            console.log(JSON.parse(JSON.stringify(goods)));
-            res.render('main', {
-                foo: 4,
-                bar: 7,
-                goods: JSON.parse(JSON.stringify(goods))
-            });
-        }
-    );
+        );
+    });
 });
 
 app.get('/category', function (req, res) {
@@ -94,14 +85,25 @@ app.post('/get-category-list', function (req, res) {
     // console.log(req.body);
     connection.query('SELECT id, category FROM category', function (error, result, fields) {
         if (error) throw error;
-        res.json(result)
+        console.log(result)
+        res.json(result);
     });
 });
 
 app.post('/get-goods-info', function (req, res) {
-    console.log(req.body);
-    // connection.query('SELECT id, category FROM category', function (error, result, fields) {
-    //     if (error) throw error;
-    //     res.json(result)
-    // });
+    console.log(req.body.key);
+    if (req.body.key.length != 0) {
+
+        connection.query('SELECT id,name,cost FROM goods WHERE id IN (' + req.body.key.join(',') + ')', function (error, result, fields) {
+            if (error) throw error;
+            console.log(result);
+            let goods = {};
+            for (let i = 0; i < result.length; i++) {
+                goods[result[i]['id']] = result[i];
+            }
+            res.json(goods);
+        });
+    } else {
+        res.send('0');
+    }
 });
