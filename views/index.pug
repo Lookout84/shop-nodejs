@@ -1,0 +1,23 @@
+include header.pug
+
+div(class='wrap')
+    div(class='content')
+        header(class='site-header')
+            include site_header
+
+        div(class='container')
+            div(class='row')
+                each val2, index2 in category
+                    div(class="col col-lg-12")
+                        h2
+                            a(
+                                href='/category?id='+val2['id']
+                            )   #{val2['category']}
+
+                    each val, index in goods
+                        if val2['id'] == val['category']
+                            include card.pug
+
+        include nav.pug
+
+    include footer.pug
