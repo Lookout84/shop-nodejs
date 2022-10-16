@@ -15,6 +15,8 @@ let mysql = require("mysql2");
 
 app.use(express.json());
 
+const nodemailer = require('nodemailer');
+
 let connection = mysql.createConnection({
   host: HOST,
   user: USER_NAME,
@@ -118,8 +120,8 @@ app.post("/get-goods-info", function (req, res) {
   if (req.body.key.length != 0) {
     connection.query(
       "SELECT id,name,cost FROM goods WHERE id IN (" +
-        req.body.key.join(",") +
-        ")",
+      req.body.key.join(",") +
+      ")",
       function (error, result, fields) {
         if (error) throw error;
         console.log(result);
@@ -135,22 +137,84 @@ app.post("/get-goods-info", function (req, res) {
   }
 });
 
-app.post("/finish-oreder", function (req, res) {
+app.post('/finish-order', function (req, res) {
   console.log(req.body);
-  if (req.body.key != 0) {
+  if (req.body.key.length != 0) {
     let key = Object.keys(req.body.key);
     connection.query(
-      "SELECT id,name,cost FROM goods WHERE id IN (" + key.join(",") + ")",
+      'SELECT id,name,cost FROM goods WHERE id IN (' + key.join(',') + ')',
       function (error, result, fields) {
         if (error) throw error;
         console.log(result);
         sendMail(req.body, result).catch(console.error);
-        res.send("1");
-      }
-    );
-  } else {
-    res.send("0");
+        saveOrder(req.body, result);
+        res.send('1');
+      });
+  }
+  else {
+    res.send('0');
   }
 });
 
-function sendMail(data, result) {}
+function saveOrder(data, result) {
+  let sql;
+  sql = "INSERT INTO user_info (user_name, user_phone, user_email,address) VALUES ('" + data.userName + "', '" + data.phone + "', '" + data.email + "','" + data.address + "')";
+  connection.query(sql, function (error, result) {
+    if (error) throw error;
+    console.log("1 user record inserted");
+  });
+  date = new Date() / 1000;
+  for (let i = 0; i < result.length; i++) {
+    sql = "INSERT INTO shop_order (date, user_id, goods_id, goods_cost, goods_amount, total) VALUES (" + date + ", 45," + result[i]['id'] + ", " + result[i]['cost'] + "," + data.key[result[i]['id']] + ", " + data.key[result[i]['id']] * result[i]['cost'] + ")";
+    console.log(sql);
+    connection.query(sql, function (error, result) {
+      if (error) throw error;
+      console.log("1 record inserted");
+    });
+  }
+}
+
+async function sendMail(data, result) {
+  let res = '<h2>Order in lite shop';
+  let total = 0;
+  for (let i = 0; i < result.length; i++) {
+    res += `<p>${result[i]['name']} - ${data.key[result[i]['id']]} - ${result[i]['cost'] * data.key[result[i]['id']]} uah</p>`;
+    total += result[i]['cost'] * data.key[result[i]['id']];
+  }
+  console.log(res);
+  res += '<hr>';
+  res += `Total ${total} uah`;
+  res += `<hr>Phone: ${data.phone}`;
+  res += `<hr>Username: ${data.username}`;
+  res += `<hr>Address: ${data.address}`;
+  res += `<hr>Email: ${data.email}`;
+
+  let testAccount = await nodemailer.createTestAccount();
+
+  let transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: testAccount.user, // generated ethereal user
+      pass: testAccount.pass // generated ethereal password
+    }
+  });
+
+
+  let mailOption = {
+    from: '<thelookout84@gmail.com>',
+    to: "thelookout84@gmail.com," + data.email,
+    subject: "Lite shop order",
+    text: 'Hello world',
+    html: res
+  };
+
+  let info = await transporter.sendMail(mailOption);
+  console.log("MessageSent: %s", info.messageId);
+  console.log("PreviewSent: %s", nodemailer.getTestMessageUrl(info));
+  return true;
+};
+
+
+

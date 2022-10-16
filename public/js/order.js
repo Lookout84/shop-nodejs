@@ -1,4 +1,6 @@
-const Swal = require("sweetalert2");
+// const Swal = require('sweetalert2');
+// // import Swal from 'sweetalert2';
+// console.log(Swal);
 
 document.querySelector("#lite-shop-order").onsubmit = function (event) {
   event.preventDefault();
@@ -9,12 +11,22 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
 
   if (!document.querySelector("#rule").checked) {
     Swal.fire({
-      title : 'Warning',
-      text: "Read and accept the "
-    })
+      title: "Warning",
+      text: "Read and accept the rule",
+      info: "info",
+      confirmButtonText: "Ok"
+    });
+    return false;
   }
 
   if (userName == "" || phone == "" || email == "" || address == "") {
+    Swal.fire({
+      title: "Warning",
+      text: "Fill all fields",
+      info: "info",
+      confirmButtonText: "Ok"
+    });
+    return false;
   }
 
   fetch("/finish-order", {
@@ -27,7 +39,7 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
       key: JSON.parse(localStorage.getItem("cart")),
     }),
     headers: {
-      Accept: "application/json",
+      "Accept": "application/json",
       "Content-Type": "application/json",
     },
   })
@@ -36,7 +48,19 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
     })
     .then(function (body) {
       if (body == 1) {
+        Swal.fire({
+          title: "Success",
+          text: "Success",
+          info: "info",
+          confirmButtonText: "Ok"
+        });
       } else {
+        Swal.fire({
+          title: "Problem with mail",
+          text: "Error",
+          info: "Error",
+          confirmButtonText: "Ok"
+        });
       }
     });
 };
