@@ -156,6 +156,53 @@ app.post('/finish-order', function (req, res) {
   }
 });
 
+app.get("/admin", function (req, res) {
+  res.render("admin", {});
+});
+
+
+app.get("/admin-order", function (req, res) {
+  connection.query(
+    `SELECT 
+    shop_order.id as id,
+    shop_order.user_id as user_id,
+    shop_order.goods_id as goods_id,
+    shop_order.goods_cost as goods_cost,
+    shop_order.goods_amount as goods_amount,
+    shop_order.total as total,
+    from_unixtime(date,"%Y-%m-%d %h:%m") as human_date,
+    user_info.user_name as user,
+    user_info.user_phone as phone,
+    user_info.address as address
+    FROM 
+    shop_order
+    LEFT JOIN	
+    user_info
+    ON shop_order.user_id = user_info.id ORDER BY id DESC`,
+    function (error, result, fields) {
+      if (error) throw error;
+      res.render("admin-order", { order: JSON.parse(JSON.stringify(result)) });
+    }
+  );
+});
+
+app.get("/login", function (req, res) {
+  res.render("login", {});
+});
+
+app.post("/login", function (req, res) {
+  res.end("work");
+  connection.query(
+    'SELECT * FROM user WHERE login="' + req.body.login + '" and password="' + req.body.password + '"',
+    function (error, result) {
+      if (error) reject(error);
+      console.log(result);
+      // console.log(JSON.parse(JSON.stringify(result)));
+    }
+  );
+  console.log(req.body);
+});
+
 function saveOrder(data, result) {
   let sql;
   sql = "INSERT INTO user_info (user_name, user_phone, user_email,address) VALUES ('" + data.userName + "', '" + data.phone + "', '" + data.email + "','" + data.address + "')";
