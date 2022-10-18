@@ -132,8 +132,8 @@ app.post("/get-goods-info", function (req, res) {
   if (req.body.key.length != 0) {
     connection.query(
       "SELECT id,name,cost FROM goods WHERE id IN (" +
-        req.body.key.join(",") +
-        ")",
+      req.body.key.join(",") +
+      ")",
       function (error, result, fields) {
         if (error) throw error;
         console.log(result);
@@ -212,10 +212,10 @@ app.post("/login", function (req, res) {
   console.log("=======================");
   connection.query(
     'SELECT * FROM user WHERE login="' +
-      req.body.login +
-      '" and password="' +
-      req.body.password +
-      '"',
+    req.body.login +
+    '" and password="' +
+    req.body.password +
+    '"',
     function (error, result) {
       if (error) reject(error);
       console.log(result);
@@ -284,9 +284,8 @@ async function sendMail(data, result) {
   let res = "<h2>Order in lite shop";
   let total = 0;
   for (let i = 0; i < result.length; i++) {
-    res += `<p>${result[i]["name"]} - ${data.key[result[i]["id"]]} - ${
-      result[i]["cost"] * data.key[result[i]["id"]]
-    } uah</p>`;
+    res += `<p>${result[i]["name"]} - ${data.key[result[i]["id"]]} - ${result[i]["cost"] * data.key[result[i]["id"]]
+      } uah</p>`;
     total += result[i]["cost"] * data.key[result[i]["id"]];
   }
   console.log(res);
