@@ -14,7 +14,7 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
       title: "Warning",
       text: "Read and accept the rule",
       info: "info",
-      confirmButtonText: "Ok"
+      confirmButtonText: "Ok",
     });
     return false;
   }
@@ -24,7 +24,7 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
       title: "Warning",
       text: "Fill all fields",
       info: "info",
-      confirmButtonText: "Ok"
+      confirmButtonText: "Ok",
     });
     return false;
   }
@@ -39,7 +39,7 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
       key: JSON.parse(localStorage.getItem("cart")),
     }),
     headers: {
-      "Accept": "application/json",
+      Accept: "application/json",
       "Content-Type": "application/json",
     },
   })
@@ -52,14 +52,14 @@ document.querySelector("#lite-shop-order").onsubmit = function (event) {
           title: "Success",
           text: "Success",
           info: "info",
-          confirmButtonText: "Ok"
+          confirmButtonText: "Ok",
         });
       } else {
         Swal.fire({
           title: "Problem with mail",
           text: "Error",
           info: "Error",
-          confirmButtonText: "Ok"
+          confirmButtonText: "Ok",
         });
       }
     });

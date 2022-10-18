@@ -1,6 +1,9 @@
 const { json } = require("express");
 let express = require("express");
 let app = express();
+let cookieParser = require("cookie-parser");
+let admin = require("./admin");
+
 app.use(express.static("public"));
 require("dotenv").config();
 const HOST = process.env.HOST;
@@ -14,8 +17,9 @@ app.set("view engine", "pug");
 let mysql = require("mysql2");
 
 app.use(express.json());
-
-const nodemailer = require('nodemailer');
+app.use(express.urlencoded());
+app.use(cookieParser());
+const nodemailer = require("nodemailer");
 
 let connection = mysql.createConnection({
   host: HOST,
@@ -27,6 +31,14 @@ let connection = mysql.createConnection({
 
 app.listen(5555, function () {
   console.log("Server work on 5555");
+});
+
+app.use(function (req, res, next) {
+  if (req.originalUrl == "/admin" || req.originalUrl == "/admin-order") {
+    admin(req, res, connection, next);
+  } else {
+    next();
+  }
 });
 
 app.get("/", function (req, res) {
@@ -120,8 +132,8 @@ app.post("/get-goods-info", function (req, res) {
   if (req.body.key.length != 0) {
     connection.query(
       "SELECT id,name,cost FROM goods WHERE id IN (" +
-      req.body.key.join(",") +
-      ")",
+        req.body.key.join(",") +
+        ")",
       function (error, result, fields) {
         if (error) throw error;
         console.log(result);
@@ -137,29 +149,28 @@ app.post("/get-goods-info", function (req, res) {
   }
 });
 
-app.post('/finish-order', function (req, res) {
+app.post("/finish-order", function (req, res) {
   console.log(req.body);
   if (req.body.key.length != 0) {
     let key = Object.keys(req.body.key);
     connection.query(
-      'SELECT id,name,cost FROM goods WHERE id IN (' + key.join(',') + ')',
+      "SELECT id,name,cost FROM goods WHERE id IN (" + key.join(",") + ")",
       function (error, result, fields) {
         if (error) throw error;
         console.log(result);
         sendMail(req.body, result).catch(console.error);
         saveOrder(req.body, result);
-        res.send('1');
-      });
-  }
-  else {
-    res.send('0');
+        res.send("1");
+      }
+    );
+  } else {
+    res.send("0");
   }
 });
 
 app.get("/admin", function (req, res) {
   res.render("admin", {});
 });
-
 
 app.get("/admin-order", function (req, res) {
   connection.query(
@@ -186,33 +197,81 @@ app.get("/admin-order", function (req, res) {
   );
 });
 
+/**
+ *  login form ==============================
+ */
 app.get("/login", function (req, res) {
   res.render("login", {});
 });
 
 app.post("/login", function (req, res) {
-  res.end("work");
+  console.log("=======================");
+  console.log(req.body);
+  console.log(req.body.login);
+  console.log(req.body.password);
+  console.log("=======================");
   connection.query(
-    'SELECT * FROM user WHERE login="' + req.body.login + '" and password="' + req.body.password + '"',
+    'SELECT * FROM user WHERE login="' +
+      req.body.login +
+      '" and password="' +
+      req.body.password +
+      '"',
     function (error, result) {
       if (error) reject(error);
       console.log(result);
-      // console.log(JSON.parse(JSON.stringify(result)));
+      console.log(result.length);
+      if (result.length == 0) {
+        console.log("error user not found");
+        res.redirect("/login");
+      } else {
+        result = JSON.parse(JSON.stringify(result));
+        let hash = makeHash(32);
+        res.cookie("hash", hash);
+        res.cookie("id", result[0]["id"]);
+        /**
+         * write hash to db
+         */
+        sql =
+          "UPDATE user  SET hash='" + hash + "' WHERE id=" + result[0]["id"];
+        connection.query(sql, function (error, resultQuery) {
+          if (error) throw error;
+          res.redirect("/admin");
+        });
+      }
     }
   );
-  console.log(req.body);
 });
 
 function saveOrder(data, result) {
   let sql;
-  sql = "INSERT INTO user_info (user_name, user_phone, user_email,address) VALUES ('" + data.userName + "', '" + data.phone + "', '" + data.email + "','" + data.address + "')";
+  sql =
+    "INSERT INTO user_info (user_name, user_phone, user_email,address) VALUES ('" +
+    data.userName +
+    "', '" +
+    data.phone +
+    "', '" +
+    data.email +
+    "','" +
+    data.address +
+    "')";
   connection.query(sql, function (error, result) {
     if (error) throw error;
     console.log("1 user record inserted");
   });
   date = new Date() / 1000;
   for (let i = 0; i < result.length; i++) {
-    sql = "INSERT INTO shop_order (date, user_id, goods_id, goods_cost, goods_amount, total) VALUES (" + date + ", 45," + result[i]['id'] + ", " + result[i]['cost'] + "," + data.key[result[i]['id']] + ", " + data.key[result[i]['id']] * result[i]['cost'] + ")";
+    sql =
+      "INSERT INTO shop_order (date, user_id, goods_id, goods_cost, goods_amount, total) VALUES (" +
+      date +
+      ", 45," +
+      result[i]["id"] +
+      ", " +
+      result[i]["cost"] +
+      "," +
+      data.key[result[i]["id"]] +
+      ", " +
+      data.key[result[i]["id"]] * result[i]["cost"] +
+      ")";
     console.log(sql);
     connection.query(sql, function (error, result) {
       if (error) throw error;
@@ -222,14 +281,16 @@ function saveOrder(data, result) {
 }
 
 async function sendMail(data, result) {
-  let res = '<h2>Order in lite shop';
+  let res = "<h2>Order in lite shop";
   let total = 0;
   for (let i = 0; i < result.length; i++) {
-    res += `<p>${result[i]['name']} - ${data.key[result[i]['id']]} - ${result[i]['cost'] * data.key[result[i]['id']]} uah</p>`;
-    total += result[i]['cost'] * data.key[result[i]['id']];
+    res += `<p>${result[i]["name"]} - ${data.key[result[i]["id"]]} - ${
+      result[i]["cost"] * data.key[result[i]["id"]]
+    } uah</p>`;
+    total += result[i]["cost"] * data.key[result[i]["id"]];
   }
   console.log(res);
-  res += '<hr>';
+  res += "<hr>";
   res += `Total ${total} uah`;
   res += `<hr>Phone: ${data.phone}`;
   res += `<hr>Username: ${data.username}`;
@@ -244,24 +305,31 @@ async function sendMail(data, result) {
     secure: false, // true for 465, false for other ports
     auth: {
       user: testAccount.user, // generated ethereal user
-      pass: testAccount.pass // generated ethereal password
-    }
+      pass: testAccount.pass, // generated ethereal password
+    },
   });
 
-
   let mailOption = {
-    from: '<thelookout84@gmail.com>',
+    from: "<thelookout84@gmail.com>",
     to: "thelookout84@gmail.com," + data.email,
     subject: "Lite shop order",
-    text: 'Hello world',
-    html: res
+    text: "Hello world",
+    html: res,
   };
 
   let info = await transporter.sendMail(mailOption);
   console.log("MessageSent: %s", info.messageId);
   console.log("PreviewSent: %s", nodemailer.getTestMessageUrl(info));
   return true;
-};
+}
 
-
-
+function makeHash(length) {
+  let result = "";
+  let characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
